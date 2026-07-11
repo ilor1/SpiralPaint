@@ -21,7 +21,6 @@
             touch-action: none; cursor: crosshair; box-sizing: border-box;
         }
 
-        /* 142% ensures corners aren't clipped during rotation */
         .canvas-rotator {
             position: absolute; top: 50%; left: 50%;
             width: 142%; height: 142%;
@@ -31,13 +30,22 @@
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;}
         #spiralLayer { z-index: 999; }
 
-        .layer-item { padding: 10px; margin-bottom: 5px; background: #3d3d3d; border-radius: 4px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .layer-item {
+            display: flex; align-items: center; gap: 5px; padding: 8px 5px;
+            margin-bottom: 5px; background: #3d3d3d; border-radius: 4px;
+            font-size: 13px; cursor: grab; min-height: 35px;
+        }
         .layer-item.active { border: 2px solid var(--accent); }
 
-        button { padding: 8px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
-        .delete-btn { background: #ff5555; color: white; margin-left: auto; }
+        /* Number display styling - takes minimal space */
+        .layer-number { min-width: 20px; font-weight: bold; text-align: center; }
 
-        /* FIX: Removing heavy styles from input to prevent Android rendering bug */
+        .button-group { display: flex; gap: 2px; flex-shrink: 0; }
+
+        button { padding: 6px 8px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
+        .delete-btn { background: #ff5555; color: white; padding: 6px 8px; }
+        .nav-btn { background: #555; color: white; padding: 6px 8px; }
+
         #paintColor { width: 100%; cursor: pointer; border: none; background: none; }
     </style>
 </head>
@@ -106,29 +114,75 @@
         const canvas = document.createElement('canvas');
         canvas.width = textureSize; canvas.height = textureSize;
         rotator.appendChild(canvas);
-        layers.push({ canvas, ctx: canvas.getContext('2d'), name: `Layer ${layers.length + 1}`, visible: true });
+        // We no longer need to store a "name" property
+        layers.push({ canvas, ctx: canvas.getContext('2d'), visible: true });
         activeLayerIndex = layers.length - 1;
+        renderLayerUI();
+    }
+
+    function moveLayer(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= layers.length) return;
+        const temp = layers[index];
+        layers[index] = layers[newIndex];
+        layers[newIndex] = temp;
+        activeLayerIndex = newIndex;
         renderLayerUI();
     }
 
     function renderLayerUI() {
         layerList.innerHTML = '';
+        // Render from top to bottom
         for (let i = layers.length - 1; i >= 0; i--) {
             const layer = layers[i];
             const div = document.createElement('div');
             div.className = `layer-item ${i === activeLayerIndex ? 'active' : ''}`;
+            div.draggable = true;
             div.onclick = () => { activeLayerIndex = i; renderLayerUI(); };
+
+            // Drag and Drop logic
+            div.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', i));
+            div.addEventListener('dragover', (e) => e.preventDefault());
+            div.addEventListener('drop', (e) => {
+                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const toIndex = i;
+                const item = layers.splice(fromIndex, 1)[0];
+                layers.splice(toIndex, 0, item);
+                activeLayerIndex = toIndex;
+                renderLayerUI();
+            });
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox'; checkbox.checked = layer.visible;
             checkbox.onchange = (e) => { layer.visible = e.target.checked; layer.canvas.style.display = layer.visible ? 'block' : 'none'; };
+
+            // Simple number label (i+1 is the display number)
+            const numberSpan = document.createElement('span');
+            numberSpan.className = 'layer-number';
+            numberSpan.textContent = (i + 1);
+
+            const btnGroup = document.createElement('div');
+            btnGroup.className = 'button-group';
+
+            const upBtn = document.createElement('button'); upBtn.innerHTML = '▲'; upBtn.className = 'nav-btn';
+            upBtn.onclick = (e) => { e.stopPropagation(); moveLayer(i, 1); };
+            const downBtn = document.createElement('button'); downBtn.innerHTML = '▼'; downBtn.className = 'nav-btn';
+            downBtn.onclick = (e) => { e.stopPropagation(); moveLayer(i, -1); };
             const delBtn = document.createElement('button');
             delBtn.innerHTML = '🗑️'; delBtn.className = 'delete-btn';
-            delBtn.onclick = (e) => { e.stopPropagation(); rotator.removeChild(layer.canvas); layers.splice(i, 1); if(activeLayerIndex >= layers.length) activeLayerIndex = layers.length-1; renderLayerUI(); };
+            delBtn.onclick = (e) => { e.stopPropagation(); rotator.removeChild(layer.canvas); layers.splice(i, 1); if(activeLayerIndex >= layers.length) activeLayerIndex = Math.max(0, layers.length-1); renderLayerUI(); };
+
+            btnGroup.appendChild(upBtn);
+            btnGroup.appendChild(downBtn);
+            btnGroup.appendChild(delBtn);
+
             div.appendChild(checkbox);
-            div.appendChild(document.createTextNode(layer.name));
-            div.appendChild(delBtn);
+            div.appendChild(numberSpan);
+            div.appendChild(btnGroup);
             layerList.appendChild(div);
         }
+
+        layers.forEach((l, idx) => l.canvas.style.zIndex = idx);
     }
 
     function clearActiveLayer() {
@@ -165,28 +219,17 @@
 
     function getCoords(clientX, clientY) {
         const rect = wrapper.getBoundingClientRect();
-        // 1. Mouse pos relative to center
         const dx = clientX - (rect.left + rect.width / 2);
         const dy = clientY - (rect.top + rect.height / 2);
-
-        // 2. Rotate coordinate back
         const rad = -currentRotation * (Math.PI / 180);
         const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
         const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
-
-        // 3. IMPORTANT: Scale is calculated using the 142% expanded rotator size
-        // We divide by (rect.width * 1.42) because the rotator is 142% of the wrapper size
         const scale = textureSize / (rect.width * 1.42);
-
-        return {
-            x: (rx * scale) + (textureSize / 2),
-            y: (ry * scale) + (textureSize / 2)
-        };
+        return { x: (rx * scale) + (textureSize / 2), y: (ry * scale) + (textureSize / 2) };
     }
 
     wrapper.addEventListener('pointerdown', (e) => {
-        isDrawing = true;
-        wrapper.setPointerCapture(e.pointerId);
+        isDrawing = true; wrapper.setPointerCapture(e.pointerId);
         const coords = getCoords(e.clientX, e.clientY);
         lastX = coords.x; lastY = coords.y;
     });
