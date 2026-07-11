@@ -2,33 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spiral Paint by Ilori</title>
     <style>
-        body { background-color: #1a1a1a; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        body { background-color: #1a1a1a; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; touch-action: manipulation; }
 
-        .main-container { display: flex; gap: 20px; align-items: flex-start; }
+        /* The container keeps things in a row on Desktop, stacks on Mobile */
+        .main-container { display: flex; gap: 20px; align-items: flex-start; justify-content: center; }
 
-        /* Holds the toolbar and canvas together to maintain alignment */
-        .canvas-column { display: flex; flex-direction: column; gap: 20px; }
+        @media (max-width: 1200px) {
+            .main-container { flex-direction: column; align-items: center; }
+        }
+
+        .canvas-column { display: flex; flex-direction: column; gap: 10px; width: 716px; }
 
         .top-toolbar {
-            background-color: #2c2c2c; padding: 15px 25px; border-radius: 8px;
-            display: flex; gap: 20px;
+            background-color: #2c2c2c; padding: 10px; border-radius: 8px;
+            display: flex; gap: 10px; flex-wrap: wrap;
             box-shadow: 0 4px 6px rgba(0,0,0,0.5); justify-content: center;
-            width: 716px; box-sizing: border-box; /* Matches 700px canvas + 8px borders */
+            width: 100%; box-sizing: border-box;
         }
 
         .side-toolbar {
-            background-color: #2c2c2c; padding: 20px; border-radius: 8px;
-            display: flex; flex-direction: column; gap: 15px;
+            background-color: #2c2c2c; padding: 15px; border-radius: 8px;
+            display: flex; flex-direction: column; gap: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.5); width: 150px;
         }
 
         .canvas-wrapper {
-            position: relative; width: 700px; height: 700px; background-color: white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow: hidden;
-            touch-action: none; border: 8px solid #333; cursor: crosshair;
+            position: relative; width: 700px; height: 700px;
+            background-color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            overflow: hidden; touch-action: none; border: 8px solid #333; cursor: crosshair;
         }
         .canvas-rotator {
             position: absolute; top: 50%; left: 50%; width: 1450px; height: 1450px; will-change: transform;
@@ -46,13 +50,8 @@
             user-select: none;
         }
         .layer-item.active { border-color: #FF3366; }
-        .layer-item.dragging { opacity: 0.5; }
 
-        .delete-btn {
-            background: #ff5555; border: none; color: white; cursor: pointer;
-            padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: auto;
-        }
-        .delete-btn:hover { background: #ff3333; }
+        .delete-btn { background: #ff5555; border: none; color: white; cursor: pointer; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: auto; }
 
         #brushCursor {
             position: fixed; border: 1px solid rgba(130, 130, 130, 1);
@@ -60,12 +59,8 @@
             z-index: 1000; transform: translate(-50%, -50%);
         }
 
-        footer {
-            margin-top: 25px;
-            color: #888;
-            font-size: 14px;
-            text-align: center;
-        }
+        @media (pointer: coarse) { #brushCursor { display: none !important; } }
+        footer { margin-top: 25px; color: #888; font-size: 14px; text-align: center; }
     </style>
 </head>
 <body>
@@ -74,7 +69,7 @@
 
 <div class="main-container">
     <div class="side-toolbar">
-        <strong>Brush Settings</strong>
+        <strong>Brush</strong>
         <label>Color</label>
         <input type="color" id="paintColor" value="#FF3366">
         <label>Size</label>
@@ -87,7 +82,7 @@
             <label><input type="checkbox" id="showSpiral" checked onchange="toggleSpiral()"> Show Spiral</label>
             <label>Rotation</label>
             <input type="range" id="rotationSpeed" min="-15" max="15" step="0.05" value="-0.15">
-            <button onclick="clearActiveLayer()" style="background-color: #ff5555; color: white;">Clear Active</button>
+            <button onclick="clearActiveLayer()" style="background-color: #ff5555; color: white;">Clear</button>
             <button onclick="exportCanvas()" style="background-color: #4CAF50; color: white;">Export</button>
         </div>
 
@@ -121,49 +116,27 @@
     let isDrawing = false;
     let lastX = 0, lastY = 0;
     let currentRotation = 0;
-    let rawMouseX = 0, rawMouseY = 0;
-    let dragSrcIndex = null;
 
-    // Optimized drawing function using lineTo instead of stamps
     function paintAt(currentX, currentY) {
         const layer = layers[activeLayerIndex];
         if (!layer || !layer.visible) return;
-
         const ctx = layer.ctx;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         ctx.strokeStyle = document.getElementById('paintColor').value;
         ctx.lineWidth = parseFloat(brushInput.value) * 2;
-
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(currentX, currentY);
         ctx.stroke();
-
-        lastX = currentX;
-        lastY = currentY;
+        lastX = currentX; lastY = currentY;
     }
 
     function addLayer() {
-        const id = Date.now();
         const canvas = document.createElement('canvas');
         canvas.width = textureSize; canvas.height = textureSize;
         rotator.appendChild(canvas);
-
-        const layer = { id, canvas, ctx: canvas.getContext('2d'), name: `Layer ${layers.length + 1}`, visible: true };
-        layers.push(layer);
+        layers.push({ canvas, ctx: canvas.getContext('2d'), name: `Layer ${layers.length + 1}`, visible: true });
         activeLayerIndex = layers.length - 1;
-        renderLayerUI();
-    }
-
-    function deleteLayer(index, e) {
-        e.stopPropagation();
-        if (layers.length <= 1) return;
-
-        rotator.removeChild(layers[index].canvas);
-        layers.splice(index, 1);
-
-        if (activeLayerIndex >= layers.length) activeLayerIndex = layers.length - 1;
         renderLayerUI();
     }
 
@@ -173,117 +146,52 @@
             const layer = layers[i];
             const div = document.createElement('div');
             div.className = `layer-item ${i === activeLayerIndex ? 'active' : ''}`;
-            div.draggable = true;
-            div.dataset.index = i;
-
-            div.addEventListener('dragstart', handleDragStart);
-            div.addEventListener('dragover', handleDragOver);
-            div.addEventListener('drop', handleDrop);
-            div.addEventListener('dragend', () => div.classList.remove('dragging'));
+            div.onclick = () => { activeLayerIndex = i; renderLayerUI(); };
 
             const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = layer.visible;
-            checkbox.onclick = (e) => e.stopPropagation();
-            checkbox.onchange = (e) => {
-                layer.visible = checkbox.checked;
-                layer.canvas.style.display = layer.visible ? 'block' : 'none';
-            };
-
-            const label = document.createElement('span');
-            label.innerText = layer.name;
+            checkbox.type = 'checkbox'; checkbox.checked = layer.visible;
+            checkbox.onchange = (e) => { layer.visible = e.target.checked; layer.canvas.style.display = layer.visible ? 'block' : 'none'; };
 
             const delBtn = document.createElement('button');
-            delBtn.innerHTML = '🗑️';
-            delBtn.className = 'delete-btn';
-            delBtn.onclick = (e) => deleteLayer(i, e);
+            delBtn.innerHTML = '🗑️'; delBtn.className = 'delete-btn';
+            delBtn.onclick = (e) => { e.stopPropagation(); rotator.removeChild(layer.canvas); layers.splice(i, 1); if(activeLayerIndex >= layers.length) activeLayerIndex = layers.length-1; renderLayerUI(); };
 
-            div.onclick = () => { activeLayerIndex = i; renderLayerUI(); };
             div.appendChild(checkbox);
-            div.appendChild(label);
+            div.appendChild(document.createTextNode(layer.name));
             div.appendChild(delBtn);
             layerList.appendChild(div);
         }
     }
 
-    function handleDragStart(e) {
-        dragSrcIndex = parseInt(e.target.dataset.index);
-        e.target.classList.add('dragging');
-    }
+    wrapper.addEventListener('wheel', (e) => { e.preventDefault(); brushInput.value = Math.max(5, Math.min(100, parseInt(brushInput.value) + (e.deltaY < 0 ? 5 : -5))); updateCursor(); }, { passive: false });
 
-    function handleDragOver(e) { e.preventDefault(); }
+    function toggleSpiral() { document.getElementById('spiralLayer').style.display = document.getElementById('showSpiral').checked ? 'block' : 'none'; }
 
-    function handleDrop(e) {
-        e.preventDefault();
-        const targetIndex = parseInt(e.target.closest('.layer-item').dataset.index);
-        if (dragSrcIndex !== targetIndex) {
-            const movedItem = layers.splice(dragSrcIndex, 1)[0];
-            layers.splice(targetIndex, 0, movedItem);
-            layers.forEach(layer => rotator.appendChild(layer.canvas));
-            rotator.appendChild(document.getElementById('spiralLayer'));
-            activeLayerIndex = targetIndex;
-            renderLayerUI();
-        }
-    }
-
-    function clearActiveLayer() {
-        const layer = layers[activeLayerIndex];
-        layer.ctx.clearRect(0, 0, textureSize, textureSize);
-    }
-
-    wrapper.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        let size = parseInt(brushInput.value);
-        size += (e.deltaY < 0 ? 5 : -5);
-        brushInput.value = Math.max(5, Math.min(100, size));
-        updateCursor();
-    }, { passive: false });
-
-    function toggleSpiral() {
-        const isChecked = document.getElementById('showSpiral').checked;
-        document.getElementById('spiralLayer').style.display = isChecked ? 'block' : 'none';
-    }
-
-    function updateCursor() {
-        const size = brushInput.value;
-        cursor.style.width = size * 2 + 'px';
-        cursor.style.height = size * 2 + 'px';
-    }
+    function updateCursor() { const size = brushInput.value; cursor.style.width = size * 2 + 'px'; cursor.style.height = size * 2 + 'px'; }
 
     wrapper.addEventListener('mouseenter', () => cursor.style.display = 'block');
     wrapper.addEventListener('mouseleave', () => cursor.style.display = 'none');
-    window.addEventListener('mousemove', (e) => {
-        cursor.style.left = e.clientX + 'px';
-        cursor.style.top = e.clientY + 'px';
-    });
+    window.addEventListener('mousemove', (e) => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
 
     function exportCanvas() {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = textureSize; tempCanvas.height = textureSize;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.fillStyle = '#FFFFFF'; tempCtx.fillRect(0, 0, textureSize, textureSize);
-        layers.forEach(layer => { if(layer.visible) tempCtx.drawImage(layer.canvas, 0, 0); });
-        if(document.getElementById('showSpiral').checked) tempCtx.drawImage(document.getElementById('spiralLayer'), 0, 0);
-        const link = document.createElement('a');
-        link.download = 'my-layered-spiral-art.png';
-        link.href = tempCanvas.toDataURL('image/png');
-        link.click();
+        const temp = document.createElement('canvas'); temp.width = textureSize; temp.height = textureSize;
+        const ctx = temp.getContext('2d'); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, textureSize, textureSize);
+        layers.forEach(l => { if(l.visible) ctx.drawImage(l.canvas, 0, 0); });
+        if(document.getElementById('showSpiral').checked) ctx.drawImage(document.getElementById('spiralLayer'), 0, 0);
+        const a = document.createElement('a'); a.download = 'art.png'; a.href = temp.toDataURL('image/png'); a.click();
     }
 
     function generateRandomSpiral() {
         sCtx.clearRect(0, 0, textureSize, textureSize);
-        const center = textureSize / 2;
-        const tightness = Math.random() * 10 + 15;
-        const numArms = Math.floor(Math.random() * 4) + 1;
+        const center = textureSize / 2, tightness = Math.random() * 10 + 15, numArms = Math.floor(Math.random() * 4) + 1;
         sCtx.lineWidth = 6; sCtx.strokeStyle = '#000000'; sCtx.lineCap = 'round';
         for (let arm = 0; arm < numArms; arm++) {
             sCtx.beginPath();
-            const angleOffset = (Math.PI * 2 / numArms) * arm;
-            for (let theta = 0; theta < 60; theta += 0.1) {
-                let r = tightness * theta;
-                let x = center + r * Math.cos(theta + angleOffset);
-                let y = center + r * Math.sin(theta + angleOffset);
-                if (theta === 0) sCtx.moveTo(x, y); else sCtx.lineTo(x, y);
+            const offset = (Math.PI * 2 / numArms) * arm;
+            for (let t = 0; t < 60; t += 0.1) {
+                let r = tightness * t;
+                let x = center + r * Math.cos(t + offset), y = center + r * Math.sin(t + offset);
+                t === 0 ? sCtx.moveTo(x, y) : sCtx.lineTo(x, y);
             }
             sCtx.stroke();
         }
@@ -291,46 +199,31 @@
 
     function getCoords(clientX, clientY) {
         const rect = wrapper.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const dx = clientX - cx;
-        const dy = clientY - cy;
+        const dx = clientX - (rect.left + rect.width / 2);
+        const dy = clientY - (rect.top + rect.height / 2);
         const rad = -currentRotation * (Math.PI / 180);
         const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
         const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
-        const scale = textureSize / 1450;
-        return { x: (rx + 725) * scale, y: (ry + 725) * scale };
+        return { x: (rx + (rect.width/2)) * (textureSize / rect.width), y: (ry + (rect.height/2)) * (textureSize / rect.height) };
     }
 
     wrapper.addEventListener('pointerdown', (e) => {
-        isDrawing = true;
-        wrapper.setPointerCapture(e.pointerId);
-        rawMouseX = e.clientX; rawMouseY = e.clientY;
-        const coords = getCoords(rawMouseX, rawMouseY);
+        isDrawing = true; wrapper.setPointerCapture(e.pointerId);
+        const coords = getCoords(e.clientX, e.clientY);
         lastX = coords.x; lastY = coords.y;
     });
-
     wrapper.addEventListener('pointermove', (e) => {
-        rawMouseX = e.clientX; rawMouseY = e.clientY;
+        if(isDrawing) { const coords = getCoords(e.clientX, e.clientY); paintAt(coords.x, coords.y); }
     });
-
     wrapper.addEventListener('pointerup', () => isDrawing = false);
 
     function animate() {
-        const speed = parseFloat(document.getElementById('rotationSpeed').value);
-        currentRotation += speed;
+        currentRotation += parseFloat(document.getElementById('rotationSpeed').value);
         rotator.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
-        if (isDrawing) {
-            const coords = getCoords(rawMouseX, rawMouseY);
-            paintAt(coords.x, coords.y);
-        }
         requestAnimationFrame(animate);
     }
 
-    updateCursor();
-    requestAnimationFrame(animate);
-    generateRandomSpiral();
-    addLayer();
+    updateCursor(); requestAnimationFrame(animate); generateRandomSpiral(); addLayer();
 </script>
 </body>
 </html>
