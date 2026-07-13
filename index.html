@@ -1,255 +1,1275 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spiral Paint by Ilori</title>
     <style>
-        :root { --bg: #1a1a1a; --panel: #2c2c2c; --accent: #FF3366; }
-        body { background-color: var(--bg); color: #fff; font-family: sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; }
+        :root {
+            --bg: #0e0e10;
+            --card-bg: #18181b;
+            --border: #27272a;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #ff3366;
+            --accent-hover: #ff5588;
+            --success: #10b981;
+            --danger: #ef4444;
+            --panel-header: #202024;
+        }
 
-        .main-container { display: grid; gap: 15px; width: 100%; max-width: 1100px; grid-template-columns: 1fr; }
-        @media (min-width: 900px) { .main-container { grid-template-columns: 200px 1fr 200px; } }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-        .panel { background: var(--panel); padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
-        .canvas-column { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-        .top-toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 10px; background: var(--panel); border-radius: 8px; }
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 10px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            background: linear-gradient(135deg, var(--accent), #ff85a2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(255, 51, 102, 0.2);
+            font-weight: 800;
+        }
+
+        .main-container {
+            display: grid;
+            gap: 15px;
+            width: 100%;
+            max-width: 1100px;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 900px) {
+            .main-container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+        }
+
+        .canvas-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .top-toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .quick-actions-group {
+            display: flex;
+            gap: 6px;
+        }
 
         .canvas-wrapper {
-            position: relative; width: 100%; aspect-ratio: 1 / 1;
-            background: white; border: 8px solid #333; overflow: hidden;
-            touch-action: none; cursor: crosshair; box-sizing: border-box;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #ffffff;
+            border: 4px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            touch-action: none;
+            cursor: crosshair;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
 
         .canvas-rotator {
-            position: absolute; top: 50%; left: 50%;
-            width: 142%; height: 142%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 142%;
+            height: 142%;
             transform: translate(-50%, -50%);
             will-change: transform;
         }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;}
-        #spiralLayer { z-index: 999; }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #spiralLayer {
+            z-index: 999;
+        }
+
+        /* Brush Cursor Preview */
+        #brushCursor {
+            position: absolute;
+            border: 1.5px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 10000;
+        }
+
+        /* Controls Panel Redesign */
+        .controls-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Beautiful Tabs */
+        .tabs-header {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            background: var(--bg);
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn span.tab-icon {
+            font-size: 1.1rem;
+        }
+
+        .tab-btn.active {
+            background: var(--card-bg);
+            color: var(--accent);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Input Controls */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .control-value {
+            color: var(--text-main);
+            font-weight: bold;
+        }
+
+        /* Beautiful Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 10px;
+            outline: none;
+            margin: 8px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.2s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.2);
+            background: var(--accent-hover);
+        }
+
+        /* Buttons styling (optimized touch targets) */
+        button,
+        .btn {
+            background: var(--border);
+            color: var(--text-main);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            min-height: 44px;
+            /* Touch target standard */
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-accent:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            background: var(--border);
+        }
+
+        .btn:disabled,
+        button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Color Picker Styling */
+        .color-picker-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 50px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+        }
+
+        /* Layer List UI */
+        .layer-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        /* Custom Scrollbar for Layer List */
+        .layer-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .layer-list-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .layer-list-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
 
         .layer-item {
-            display: flex; align-items: center; gap: 5px; padding: 8px 5px;
-            margin-bottom: 5px; background: #3d3d3d; border-radius: 4px;
-            font-size: 13px; cursor: grab; min-height: 35px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.2s ease;
         }
-        .layer-item.active { border: 2px solid var(--accent); }
 
-        /* Number display styling - takes minimal space */
-        .layer-number { min-width: 20px; font-weight: bold; text-align: center; }
+        .layer-item:active {
+            cursor: grabbing;
+        }
 
-        .button-group { display: flex; gap: 2px; flex-shrink: 0; }
+        .layer-item.active {
+            border-color: var(--accent);
+            background: #201318;
+            box-shadow: 0 0 10px rgba(255, 51, 102, 0.05);
+        }
 
-        button { padding: 6px 8px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
-        .delete-btn { background: #ff5555; color: white; padding: 6px 8px; }
-        .nav-btn { background: #555; color: white; padding: 6px 8px; }
+        .layer-row-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
 
-        #paintColor { width: 100%; cursor: pointer; border: none; background: none; }
+        .layer-visibility-toggle {
+            font-size: 1.1rem;
+            background: none;
+            padding: 0;
+            border: none;
+            min-height: auto;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .layer-visibility-toggle.visible {
+            color: var(--accent);
+        }
+
+        .layer-name-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1.5px solid transparent;
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 0.9rem;
+            flex-grow: 1;
+            padding: 2px 4px;
+            width: 50px;
+        }
+
+        .layer-name-input:focus {
+            outline: none;
+            border-bottom-color: var(--accent);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .layer-btn-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        .layer-btn {
+            background: transparent;
+            padding: 4px 8px;
+            min-height: 32px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .layer-btn:hover {
+            background: var(--border);
+        }
+
+        .layer-row-bottom {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+            pointer-events: none;
+        }
+
+        .layer-row-bottom input[type="range"] {
+            pointer-events: auto;
+        }
+
+        .layer-opacity-icon {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Toggle Switches */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg);
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-round {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border);
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider-round:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider-round {
+            background-color: var(--accent);
+        }
+
+        input:checked+.slider-round:before {
+            transform: translateX(20px);
+        }
     </style>
 </head>
+
 <body>
 
-<div class="main-container">
-    <div class="panel">
-        <strong>Brush</strong>
-        <input type="color" id="paintColor" value="#FF3366">
-        <label style="font-size: 0.8em; margin-top:10px; display:block;">Size</label>
-        <input type="range" id="brushSize" min="2" max="75" value="15" style="width:100%">
-    </div>
+    <header>
+        <h1>🌀 Spiral Paint</h1>
+        <div class="quick-actions-group">
+            <button id="undoBtn" onclick="undo()" title="Undo" class="btn-outline"
+                style="min-height: 38px; padding: 6px 12px;"><span style="font-size: 1.1rem;">↶</span></button>
+            <button id="redoBtn" onclick="redo()" title="Redo" class="btn-outline"
+                style="min-height: 38px; padding: 6px 12px;"><span style="font-size: 1.1rem;">↷</span></button>
+        </div>
+    </header>
 
-    <div class="canvas-column">
-        <div class="top-toolbar">
-            <button onclick="generateRandomSpiral();">New</button>
-            <label style="display:flex; align-items:center;"><input type="checkbox" id="showSpiral" checked onchange="toggleSpiral()"> Show</label>
-            <input type="range" id="rotationSpeed" min="-15" max="15" step="0.05" value="-0.15" style="width: 80px;">
-            <button onclick="clearActiveLayer()" style="background-color: #ff5555; color: white;">Clear</button>
-            <button onclick="exportCanvas()" style="background-color: #4CAF50; color: white;">Export</button>
+    <div class="main-container">
+        <!-- Left Column: Canvas & Primary Quick Actions -->
+        <div class="canvas-column">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <div class="canvas-rotator" id="canvasRotator">
+                    <canvas id="spiralLayer" width="1024" height="1024"></canvas>
+                </div>
+                <!-- Interactive Brush Cursor visual element -->
+                <div id="brushCursor"></div>
+            </div>
+
+            <div class="top-toolbar">
+                <div class="quick-actions-group">
+                    <button id="playPauseBtn" onclick="toggleRotation()" class="btn-outline"
+                        style="min-height: 38px; padding: 6px 12px;">
+                        ⏸️ Pause
+                    </button>
+                    <button onclick="resetRotation()" class="btn-outline" style="min-height: 38px; padding: 6px 12px;"
+                        title="Reset Canvas Angle">
+                        ↺ Reset Angle
+                    </button>
+                </div>
+                <div class="quick-actions-group">
+                    <button onclick="clearActiveLayer()" class="btn-danger"
+                        style="min-height: 38px; padding: 6px 12px;">Clear</button>
+                    <button onclick="exportCanvas()" class="btn-success"
+                        style="min-height: 38px; padding: 6px 12px;">Export</button>
+                </div>
+            </div>
         </div>
 
-        <div class="canvas-wrapper" id="canvasWrapper">
-            <div class="canvas-rotator" id="canvasRotator">
-                <canvas id="spiralLayer" width="1024" height="1024"></canvas>
+        <!-- Right Column: Premium Tabbed Controls Panel -->
+        <div class="controls-card">
+            <div class="tabs-header">
+                <button class="tab-btn active" onclick="switchTab(event, 'brush-tab')">
+                    <span class="tab-icon">🎨</span>
+                    Brush
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'spiral-tab')">
+                    <span class="tab-icon">🌀</span>
+                    Spiral
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'layers-tab')">
+                    <span class="tab-icon">📝</span>
+                    Layers
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'motion-tab')">
+                    <span class="tab-icon">⚙️</span>
+                    Motion
+                </button>
+            </div>
+
+            <!-- 1. BRUSH & SYMMETRY TAB -->
+            <div id="brush-tab" class="tab-content active">
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Brush Color</span>
+                    </label>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="paintColor" value="#FF3366">
+                        <div style="font-size: 0.9rem; font-weight: bold; text-transform: uppercase;"
+                            id="paintColorHex">#FF3366</div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Brush Size</span>
+                        <span class="control-value" id="brushSizeVal">15px</span>
+                    </label>
+                    <input type="range" id="brushSize" min="2" max="75" value="15" oninput="updateBrushSizeDisplay()">
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Brush Opacity</span>
+                        <span class="control-value" id="brushOpacityVal">100%</span>
+                    </label>
+                    <input type="range" id="brushOpacity" min="5" max="100" value="100"
+                        oninput="updateBrushOpacityDisplay()">
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Rotational Symmetry (Mandala)</span>
+                        <span class="control-value" id="brushSymmetryVal">1x</span>
+                    </label>
+                    <input type="range" id="brushSymmetry" min="1" max="12" value="1" step="1"
+                        oninput="updateSymmetryDisplay()">
+                </div>
+
+                <div class="toggle-container">
+                    <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted)">Show Symmetry
+                        Guides</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showSymmetryGuides" checked onchange="updateSymmetryDisplay()">
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 2. SPIRAL TAB -->
+            <div id="spiral-tab" class="tab-content">
+                <div class="toggle-container">
+                    <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted)">Show Spiral
+                        Overlay</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showSpiral" checked onchange="toggleSpiral()">
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Spiral Color</span>
+                    </label>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="spiralColor" value="#000000" onchange="redrawSpiralLayer()">
+                        <div style="font-size: 0.9rem; font-weight: bold; text-transform: uppercase;"
+                            id="spiralColorHex">#000000</div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Spiral Arms</span>
+                        <span class="control-value" id="spiralArmsVal">3</span>
+                    </label>
+                    <input type="range" id="spiralArms" min="1" max="12" value="3" step="1"
+                        oninput="updateSpiralDisplay()">
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Spiral Tightness</span>
+                        <span class="control-value" id="spiralTightnessVal">20</span>
+                    </label>
+                    <input type="range" id="spiralTightness" min="5" max="40" value="20" step="0.5"
+                        oninput="updateSpiralDisplay()">
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Spiral Thickness</span>
+                        <span class="control-value" id="spiralWidthVal">6px</span>
+                    </label>
+                    <input type="range" id="spiralWidth" min="1" max="15" value="6" step="0.5"
+                        oninput="updateSpiralDisplay()">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 5px;">
+                    <button onclick="generateRandomSpiral()" class="btn btn-accent" style="min-height: 44px;">
+                        🎲 Randomize
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. LAYERS TAB -->
+            <div id="layers-tab" class="tab-content">
+                <button onclick="addLayer()" class="btn btn-accent" style="width: 100%; min-height: 44px;">
+                    ➕ Add New Layer
+                </button>
+
+                <div id="layerList" class="layer-list-container">
+                    <!-- Layers are rendered dynamically here -->
+                </div>
+            </div>
+
+            <!-- 4. MOTION & UTILITIES TAB -->
+            <div id="motion-tab" class="tab-content">
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Rotation Speed</span>
+                        <span class="control-value" id="rotationSpeedVal">-0.15°</span>
+                    </label>
+                    <input type="range" id="rotationSpeed" min="-10" max="10" step="0.05" value="-0.15"
+                        oninput="updateRotationSpeedDisplay()">
+                </div>
+
+                <div class="control-group" style="margin-top: 10px;">
+                    <label class="control-label-row" style="margin-bottom: 5px;">Presets</label>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                        <button class="layer-btn" onclick="setSpeedPreset(-2)" style="min-height: 38px;">Fast
+                            Left</button>
+                        <button class="layer-btn" onclick="setSpeedPreset(0)" style="min-height: 38px;">Stop</button>
+                        <button class="layer-btn" onclick="setSpeedPreset(2)" style="min-height: 38px;">Fast
+                            Right</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="panel">
-        <strong>Layers</strong>
-        <button onclick="addLayer()" style="width: 100%; margin-top: 10px;">+ Add Layer</button>
-        <div id="layerList" style="margin-top: 10px;"></div>
-    </div>
-</div>
+    <script>
+        const wrapper = document.getElementById('canvasWrapper');
+        const rotator = document.getElementById('canvasRotator');
+        const sCtx = document.getElementById('spiralLayer').getContext('2d');
+        const brushInput = document.getElementById('brushSize');
+        const brushOpacityInput = document.getElementById('brushOpacity');
+        const brushSymmetryInput = document.getElementById('brushSymmetry');
+        const layerList = document.getElementById('layerList');
 
-<script>
-    const wrapper = document.getElementById('canvasWrapper');
-    const rotator = document.getElementById('canvasRotator');
-    const sCtx = document.getElementById('spiralLayer').getContext('2d');
-    const brushInput = document.getElementById('brushSize');
-    const layerList = document.getElementById('layerList');
+        let layers = [];
+        let activeLayerIndex = 0;
+        const textureSize = 1024;
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let currentX = 0, currentY = 0;
+        let currentRotation = 0;
+        let isRotating = true;
+        let pointerX = 0, pointerY = 0;
 
-    let layers = [];
-    let activeLayerIndex = 0;
-    const textureSize = 1024;
-    let isDrawing = false;
-    let lastX = 0, lastY = 0;
-    let currentRotation = 0;
+        // Undo / Redo Stacks
+        let undoStack = [];
+        let redoStack = [];
 
-    function paintAt(currentX, currentY) {
-        const layer = layers[activeLayerIndex];
-        if (!layer || !layer.visible) return;
-        const ctx = layer.ctx;
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        ctx.strokeStyle = document.getElementById('paintColor').value;
-        ctx.lineWidth = parseFloat(brushInput.value) * 2;
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(currentX, currentY);
-        ctx.stroke();
-        lastX = currentX; lastY = currentY;
-    }
+        // Sync Hex text for paint and spiral color pickers
+        document.getElementById('paintColor').addEventListener('input', (e) => {
+            document.getElementById('paintColorHex').textContent = e.target.value.toUpperCase();
+        });
+        document.getElementById('spiralColor').addEventListener('input', (e) => {
+            document.getElementById('spiralColorHex').textContent = e.target.value.toUpperCase();
+            drawSpiral();
+        });
 
-    function addLayer() {
-        const canvas = document.createElement('canvas');
-        canvas.width = textureSize; canvas.height = textureSize;
-        rotator.appendChild(canvas);
-        // We no longer need to store a "name" property
-        layers.push({ canvas, ctx: canvas.getContext('2d'), visible: true });
-        activeLayerIndex = layers.length - 1;
-        renderLayerUI();
-    }
-
-    function moveLayer(index, direction) {
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= layers.length) return;
-        const temp = layers[index];
-        layers[index] = layers[newIndex];
-        layers[newIndex] = temp;
-        activeLayerIndex = newIndex;
-        renderLayerUI();
-    }
-
-    function renderLayerUI() {
-        layerList.innerHTML = '';
-        // Render from top to bottom
-        for (let i = layers.length - 1; i >= 0; i--) {
-            const layer = layers[i];
-            const div = document.createElement('div');
-            div.className = `layer-item ${i === activeLayerIndex ? 'active' : ''}`;
-            div.draggable = true;
-            div.onclick = () => { activeLayerIndex = i; renderLayerUI(); };
-
-            // Drag and Drop logic
-            div.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', i));
-            div.addEventListener('dragover', (e) => e.preventDefault());
-            div.addEventListener('drop', (e) => {
-                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                const toIndex = i;
-                const item = layers.splice(fromIndex, 1)[0];
-                layers.splice(toIndex, 0, item);
-                activeLayerIndex = toIndex;
-                renderLayerUI();
-            });
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox'; checkbox.checked = layer.visible;
-            checkbox.onchange = (e) => { layer.visible = e.target.checked; layer.canvas.style.display = layer.visible ? 'block' : 'none'; };
-
-            // Simple number label (i+1 is the display number)
-            const numberSpan = document.createElement('span');
-            numberSpan.className = 'layer-number';
-            numberSpan.textContent = (i + 1);
-
-            const btnGroup = document.createElement('div');
-            btnGroup.className = 'button-group';
-
-            const upBtn = document.createElement('button'); upBtn.innerHTML = '▲'; upBtn.className = 'nav-btn';
-            upBtn.onclick = (e) => { e.stopPropagation(); moveLayer(i, 1); };
-            const downBtn = document.createElement('button'); downBtn.innerHTML = '▼'; downBtn.className = 'nav-btn';
-            downBtn.onclick = (e) => { e.stopPropagation(); moveLayer(i, -1); };
-            const delBtn = document.createElement('button');
-            delBtn.innerHTML = '🗑️'; delBtn.className = 'delete-btn';
-            delBtn.onclick = (e) => { e.stopPropagation(); rotator.removeChild(layer.canvas); layers.splice(i, 1); if(activeLayerIndex >= layers.length) activeLayerIndex = Math.max(0, layers.length-1); renderLayerUI(); };
-
-            btnGroup.appendChild(upBtn);
-            btnGroup.appendChild(downBtn);
-            btnGroup.appendChild(delBtn);
-
-            div.appendChild(checkbox);
-            div.appendChild(numberSpan);
-            div.appendChild(btnGroup);
-            layerList.appendChild(div);
+        // Display updates
+        function updateBrushSizeDisplay() {
+            document.getElementById('brushSizeVal').textContent = brushInput.value + 'px';
+        }
+        function updateBrushOpacityDisplay() {
+            document.getElementById('brushOpacityVal').textContent = brushOpacityInput.value + '%';
+        }
+        function updateSymmetryDisplay() {
+            const val = parseInt(brushSymmetryInput.value);
+            document.getElementById('brushSymmetryVal').textContent = val + 'x';
+            updateSpiralLayerVisibility();
+            redrawSpiralLayer();
+        }
+        function updateRotationSpeedDisplay() {
+            const val = parseFloat(document.getElementById('rotationSpeed').value);
+            document.getElementById('rotationSpeedVal').textContent = val.toFixed(2) + '°';
+        }
+        function updateSpiralDisplay() {
+            document.getElementById('spiralArmsVal').textContent = document.getElementById('spiralArms').value;
+            document.getElementById('spiralTightnessVal').textContent = document.getElementById('spiralTightness').value;
+            document.getElementById('spiralWidthVal').textContent = document.getElementById('spiralWidth').value + 'px';
+            redrawSpiralLayer();
+        }
+        function setSpeedPreset(speed) {
+            document.getElementById('rotationSpeed').value = speed;
+            updateRotationSpeedDisplay();
         }
 
-        layers.forEach((l, idx) => l.canvas.style.zIndex = idx);
-    }
-
-    function clearActiveLayer() {
-        if(layers[activeLayerIndex]) {
-            layers[activeLayerIndex].ctx.clearRect(0, 0, textureSize, textureSize);
-        }
-    }
-
-    function toggleSpiral() { document.getElementById('spiralLayer').style.display = document.getElementById('showSpiral').checked ? 'block' : 'none'; }
-
-    function exportCanvas() {
-        const temp = document.createElement('canvas'); temp.width = textureSize; temp.height = textureSize;
-        const ctx = temp.getContext('2d'); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, textureSize, textureSize);
-        layers.forEach(l => { if(l.visible) ctx.drawImage(l.canvas, 0, 0); });
-        if(document.getElementById('showSpiral').checked) ctx.drawImage(document.getElementById('spiralLayer'), 0, 0);
-        const a = document.createElement('a'); a.download = 'art.png'; a.href = temp.toDataURL('image/png'); a.click();
-    }
-
-    function generateRandomSpiral() {
-        sCtx.clearRect(0, 0, textureSize, textureSize);
-        const center = textureSize / 2, tightness = Math.random() * 10 + 15, numArms = Math.floor(Math.random() * 4) + 1;
-        sCtx.lineWidth = 6; sCtx.strokeStyle = '#000000'; sCtx.lineCap = 'round';
-        for (let arm = 0; arm < numArms; arm++) {
-            sCtx.beginPath();
-            const offset = (Math.PI * 2 / numArms) * arm;
-            for (let t = 0; t < 60; t += 0.1) {
-                let r = tightness * t;
-                let x = center + r * Math.cos(t + offset), y = center + r * Math.sin(t + offset);
-                t === 0 ? sCtx.moveTo(x, y) : sCtx.lineTo(x, y);
+        // Toggle Panels
+        function switchTab(evt, tabId) {
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
             }
-            sCtx.stroke();
+
+            const tabBtns = document.getElementsByClassName('tab-btn');
+            for (let i = 0; i < tabBtns.length; i++) {
+                tabBtns[i].classList.remove('active');
+            }
+
+            document.getElementById(tabId).classList.add('active');
+            evt.currentTarget.classList.add('active');
         }
-    }
 
-    function getCoords(clientX, clientY) {
-        const rect = wrapper.getBoundingClientRect();
-        const dx = clientX - (rect.left + rect.width / 2);
-        const dy = clientY - (rect.top + rect.height / 2);
-        const rad = -currentRotation * (Math.PI / 180);
-        const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
-        const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
-        const scale = textureSize / (rect.width * 1.42);
-        return { x: (rx * scale) + (textureSize / 2), y: (ry * scale) + (textureSize / 2) };
-    }
+        // Motion Play / Pause
+        function toggleRotation() {
+            isRotating = !isRotating;
+            document.getElementById('playPauseBtn').innerHTML = isRotating ? '⏸️ Pause' : '▶️ Play';
+        }
 
-    wrapper.addEventListener('pointerdown', (e) => {
-        isDrawing = true; wrapper.setPointerCapture(e.pointerId);
-        const coords = getCoords(e.clientX, e.clientY);
-        lastX = coords.x; lastY = coords.y;
-    });
-    wrapper.addEventListener('pointermove', (e) => {
-        if(isDrawing) {
+        function resetRotation() {
+            currentRotation = 0;
+            rotator.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+        }
+
+        // Undo / Redo Core Functions
+        function pushToUndo(layerIdx) {
+            const canvas = layers[layerIdx].canvas;
+            const ctx = layers[layerIdx].ctx;
+            const imgData = ctx.getImageData(0, 0, textureSize, textureSize);
+            undoStack.push({ layerIdx, imgData });
+
+            // Limit undo levels
+            if (undoStack.length > 20) {
+                undoStack.shift();
+            }
+            redoStack = []; // Clear redo stack on new stroke
+            updateUndoRedoButtons();
+        }
+
+        function undo() {
+            if (undoStack.length === 0) return;
+            const action = undoStack.pop();
+
+            const canvas = layers[action.layerIdx].canvas;
+            const ctx = layers[action.layerIdx].ctx;
+
+            // Save current into redo stack
+            const currentImgData = ctx.getImageData(0, 0, textureSize, textureSize);
+            redoStack.push({ layerIdx: action.layerIdx, imgData: currentImgData });
+
+            // Restore image data
+            ctx.clearRect(0, 0, textureSize, textureSize);
+            ctx.putImageData(action.imgData, 0, 0);
+
+            activeLayerIndex = action.layerIdx;
+            renderLayerUI();
+            updateUndoRedoButtons();
+        }
+
+        function redo() {
+            if (redoStack.length === 0) return;
+            const action = redoStack.pop();
+
+            const canvas = layers[action.layerIdx].canvas;
+            const ctx = layers[action.layerIdx].ctx;
+
+            // Save current into undo stack
+            const currentImgData = ctx.getImageData(0, 0, textureSize, textureSize);
+            undoStack.push({ layerIdx: action.layerIdx, imgData: currentImgData });
+
+            // Restore image data
+            ctx.clearRect(0, 0, textureSize, textureSize);
+            ctx.putImageData(action.imgData, 0, 0);
+
+            activeLayerIndex = action.layerIdx;
+            renderLayerUI();
+            updateUndoRedoButtons();
+        }
+
+        function updateUndoRedoButtons() {
+            document.getElementById('undoBtn').disabled = undoStack.length === 0;
+            document.getElementById('redoBtn').disabled = redoStack.length === 0;
+        }
+
+        // Symmetric Mandala Drawing
+        function drawSymmetricLine(x1, y1, x2, y2, color, size, opacity, symmetry) {
+            const ctx = layers[activeLayerIndex].ctx;
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = size * 2;
+            ctx.globalAlpha = opacity / 100;
+
+            const center = textureSize / 2;
+            const angleStep = (Math.PI * 2) / symmetry;
+
+            for (let i = 0; i < symmetry; i++) {
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(angleStep * i);
+                ctx.translate(-center, -center);
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        function paintAt(currentX, currentY) {
+            const layer = layers[activeLayerIndex];
+            if (!layer || !layer.visible) return;
+
+            const color = document.getElementById('paintColor').value;
+            const size = parseFloat(brushInput.value);
+            const opacity = parseFloat(brushOpacityInput.value);
+            const symmetry = parseInt(brushSymmetryInput.value);
+
+            // Always update lastX/lastY to current position to ensure line drawing works
+            // If position hasn't changed, this draws a very small line (appears as a dot)
+            if (lastX === currentX && lastY === currentY) {
+                // Draw a small dot by creating a tiny line segment
+                const offset = 0.1;
+                drawSymmetricLine(currentX - offset, currentY - offset, currentX + offset, currentY + offset, color, size, opacity, symmetry);
+            } else {
+                // Draw a line from last position to current position
+                drawSymmetricLine(lastX, lastY, currentX, currentY, color, size, opacity, symmetry);
+            }
+
+            // Always update last position
+            lastX = currentX;
+            lastY = currentY;
+        }
+
+        // We no longer need to store a "name" property in raw push, but let's keep it complete
+        function addLayer() {
+            const canvas = document.createElement('canvas');
+            canvas.width = textureSize; canvas.height = textureSize;
+            rotator.appendChild(canvas);
+            const newIndex = layers.length + 1;
+            layers.push({ canvas, ctx: canvas.getContext('2d'), visible: true, opacity: 100, name: `Layer ${newIndex}` });
+            activeLayerIndex = layers.length - 1;
+            renderLayerUI();
+        }
+
+        function moveLayer(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= layers.length) return;
+            const temp = layers[index];
+            layers[index] = layers[newIndex];
+            layers[newIndex] = temp;
+            activeLayerIndex = newIndex;
+            renderLayerUI();
+        }
+
+        function renderLayerUI() {
+            layerList.innerHTML = '';
+            // Render from top to bottom
+            for (let i = layers.length - 1; i >= 0; i--) {
+                const layer = layers[i];
+                const div = document.createElement('div');
+                div.className = `layer-item ${i === activeLayerIndex ? 'active' : ''}`;
+                div.onclick = () => { activeLayerIndex = i; renderLayerUI(); };
+
+                // Top Row of Layer Item
+                const topRow = document.createElement('div');
+                topRow.className = 'layer-row-top';
+
+                // Visibility Toggle
+                const toggle = document.createElement('button');
+                toggle.className = `layer-visibility-toggle ${layer.visible ? 'visible' : ''}`;
+                toggle.innerHTML = layer.visible ? '👁️' : '🕶️';
+                toggle.onclick = (e) => {
+                    e.stopPropagation();
+                    layer.visible = !layer.visible;
+                    layer.canvas.style.display = layer.visible ? 'block' : 'none';
+                    renderLayerUI();
+                };
+                topRow.appendChild(toggle);
+
+                // Layer Name Input (Double click to type / directly editable for mobile convenience)
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'layer-name-input';
+                nameInput.value = layer.name || `Layer ${i + 1}`;
+                nameInput.onclick = (e) => e.stopPropagation();
+                nameInput.onchange = (e) => {
+                    layer.name = e.target.value;
+                };
+                topRow.appendChild(nameInput);
+
+                // Layer specific buttons (Delete only - no Duplicate)
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'layer-btn-group';
+
+                // Up Button
+                const upBtn = document.createElement('button');
+                upBtn.innerHTML = '▲';
+                upBtn.className = 'layer-btn';
+                upBtn.title = 'Move Layer Up';
+                upBtn.disabled = i === layers.length - 1;
+                upBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    moveLayer(i, 1);
+                };
+
+                // Down Button
+                const downBtn = document.createElement('button');
+                downBtn.innerHTML = '▼';
+                downBtn.className = 'layer-btn';
+                downBtn.title = 'Move Layer Down';
+                downBtn.disabled = i === 0;
+                downBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    moveLayer(i, -1);
+                };
+
+                // Delete Button
+                const delBtn = document.createElement('button');
+                delBtn.innerHTML = '🗑️';
+                delBtn.className = 'layer-btn btn-danger';
+                delBtn.style.padding = '4px 8px';
+                delBtn.style.minHeight = '32px';
+                delBtn.title = 'Delete Layer';
+                delBtn.disabled = layers.length <= 1; // Keep at least one layer
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    rotator.removeChild(layer.canvas);
+                    layers.splice(i, 1);
+                    if (activeLayerIndex >= layers.length) {
+                        activeLayerIndex = Math.max(0, layers.length - 1);
+                    }
+                    renderLayerUI();
+                };
+
+                btnGroup.appendChild(upBtn);
+                btnGroup.appendChild(downBtn);
+                btnGroup.appendChild(delBtn);
+                topRow.appendChild(btnGroup);
+
+                // Bottom Row of Layer Item (Opacity Slider)
+                const bottomRow = document.createElement('div');
+                bottomRow.className = 'layer-row-bottom';
+
+                const opacityIcon = document.createElement('span');
+                opacityIcon.className = 'layer-opacity-icon';
+                opacityIcon.textContent = `Opacity: ${layer.opacity}%`;
+
+                const opacitySlider = document.createElement('input');
+                opacitySlider.type = 'range';
+                opacitySlider.min = '0';
+                opacitySlider.max = '100';
+                opacitySlider.value = layer.opacity;
+                opacitySlider.style.margin = '0';
+                opacitySlider.onclick = (e) => e.stopPropagation();
+                opacitySlider.oninput = (e) => {
+                    const val = parseInt(e.target.value);
+                    layer.opacity = val;
+                    opacityIcon.textContent = `Opacity: ${val}%`;
+                    layer.canvas.style.opacity = (val / 100).toString();
+                };
+
+                bottomRow.appendChild(opacityIcon);
+                bottomRow.appendChild(opacitySlider);
+
+                div.appendChild(topRow);
+                div.appendChild(bottomRow);
+                layerList.appendChild(div);
+            }
+
+            layers.forEach((l, idx) => {
+                l.canvas.style.zIndex = idx;
+                l.canvas.style.opacity = (l.opacity / 100).toString();
+                l.canvas.style.display = l.visible ? 'block' : 'none';
+            });
+        }
+
+        function clearActiveLayer() {
+            if (layers[activeLayerIndex]) {
+                pushToUndo(activeLayerIndex); // save before clearing
+                layers[activeLayerIndex].ctx.clearRect(0, 0, textureSize, textureSize);
+            }
+        }
+
+        function updateSpiralLayerVisibility() {
+            const showSpiral = document.getElementById('showSpiral').checked;
+            const showGuides = document.getElementById('showSymmetryGuides').checked;
+            const symmetry = parseInt(brushSymmetryInput.value);
+
+            // Show layer if spiral is enabled OR if guides are enabled with symmetry > 1
+            const shouldShow = showSpiral || (showGuides && symmetry > 1);
+            document.getElementById('spiralLayer').style.display = shouldShow ? 'block' : 'none';
+        }
+
+        function toggleSpiral() {
+            updateSpiralLayerVisibility();
+            redrawSpiralLayer();
+        }
+
+        function exportCanvas() {
+            const temp = document.createElement('canvas'); temp.width = textureSize; temp.height = textureSize;
+            const ctx = temp.getContext('2d'); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, textureSize, textureSize);
+            layers.forEach(l => {
+                if (l.visible) {
+                    ctx.save();
+                    ctx.globalAlpha = l.opacity / 100;
+                    ctx.drawImage(l.canvas, 0, 0);
+                    ctx.restore();
+                }
+            });
+            if (document.getElementById('showSpiral').checked) ctx.drawImage(document.getElementById('spiralLayer'), 0, 0);
+            const a = document.createElement('a'); a.download = 'art.png'; a.href = temp.toDataURL('image/png'); a.click();
+        }
+
+        function generateRandomSpiral() {
+            const arms = Math.floor(Math.random() * 5) + 1; // 1 to 5 arms
+            const tightness = Math.random() * 15 + 10;      // 10 to 25 tightness
+            const width = Math.floor(Math.random() * 6) + 3; // 3px to 8px thickness
+            const colors = ['#000000', '#2563eb', '#db2777', '#059669', '#7c3aed', '#ea580c'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+            document.getElementById('spiralArms').value = arms;
+            document.getElementById('spiralTightness').value = tightness;
+            document.getElementById('spiralWidth').value = width;
+            document.getElementById('spiralColor').value = randomColor;
+            document.getElementById('spiralColorHex').textContent = randomColor.toUpperCase();
+
+            updateSpiralDisplay();
+        }
+
+        function drawSymmetryGuides() {
+            const symmetry = parseInt(brushSymmetryInput.value);
+            const showGuides = document.getElementById('showSymmetryGuides').checked;
+            if (symmetry > 1 && showGuides) {
+                sCtx.save();
+                sCtx.strokeStyle = 'rgba(128, 128, 128, 0.45)';
+                sCtx.lineWidth = 2;
+                sCtx.setLineDash([6, 8]);
+                const center = textureSize / 2;
+                for (let i = 0; i < symmetry; i++) {
+                    sCtx.beginPath();
+                    sCtx.moveTo(center, center);
+                    const angle = (Math.PI * 2 / symmetry) * i;
+                    const r = center * 1.5;
+                    sCtx.lineTo(center + r * Math.cos(angle), center + r * Math.sin(angle));
+                    sCtx.stroke();
+                }
+                sCtx.restore();
+            }
+        }
+
+        function drawSpiral() {
+            const show = document.getElementById('showSpiral').checked;
+            if (!show) return;
+
+            const arms = parseInt(document.getElementById('spiralArms').value);
+            const tightness = parseFloat(document.getElementById('spiralTightness').value);
+            const width = parseFloat(document.getElementById('spiralWidth').value);
+            const color = document.getElementById('spiralColor').value;
+
+            sCtx.lineWidth = width;
+            sCtx.strokeStyle = color;
+            sCtx.lineCap = 'round';
+
+            const center = textureSize / 2;
+            for (let arm = 0; arm < arms; arm++) {
+                sCtx.beginPath();
+                const offset = (Math.PI * 2 / arms) * arm;
+                for (let t = 0; t < 60; t += 0.1) {
+                    let r = tightness * t;
+                    let x = center + r * Math.cos(t + offset), y = center + r * Math.sin(t + offset);
+                    t === 0 ? sCtx.moveTo(x, y) : sCtx.lineTo(x, y);
+                }
+                sCtx.stroke();
+            }
+        }
+
+        function redrawSpiralLayer() {
+            sCtx.clearRect(0, 0, textureSize, textureSize);
+            drawSpiral();
+            drawSymmetryGuides();
+        }
+
+        function getCoords(clientX, clientY) {
+            const rect = wrapper.getBoundingClientRect();
+            const dx = clientX - (rect.left + rect.width / 2);
+            const dy = clientY - (rect.top + rect.height / 2);
+            const rad = -currentRotation * (Math.PI / 180);
+            const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+            const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+            const scale = textureSize / (rect.width * 1.42);
+            return { x: (rx * scale) + (textureSize / 2), y: (ry * scale) + (textureSize / 2) };
+        }
+
+        wrapper.addEventListener('pointerdown', (e) => {
+            isDrawing = true; wrapper.setPointerCapture(e.pointerId);
+            if (layers[activeLayerIndex]) {
+                pushToUndo(activeLayerIndex);
+            }
+
+            // Store global screen coordinates
+            pointerX = e.clientX;
+            pointerY = e.clientY;
+
             const coords = getCoords(e.clientX, e.clientY);
-            paintAt(coords.x, coords.y);
+            lastX = coords.x; lastY = coords.y;
+            currentX = coords.x; currentY = coords.y;
+        });
+        wrapper.addEventListener('pointermove', (e) => {
+            // Keep global screen coordinates updated (from the previous continuous drawing fix)
+            pointerX = e.clientX;
+            pointerY = e.clientY;
+
+            const coords = getCoords(e.clientX, e.clientY);
+            currentX = coords.x;
+            currentY = coords.y;
+
+            if (e.pointerType === 'mouse') {
+                const rect = wrapper.getBoundingClientRect();
+                const cursor = document.getElementById('brushCursor');
+                const brushSizeVal = parseFloat(brushInput.value);
+                const screenDiameter = (brushSizeVal * 2) * (rect.width * 1.42) / 1024;
+
+                cursor.style.display = 'block';
+
+                // SUBTRACT 4px to account for the canvas-wrapper border thickness
+                cursor.style.left = `${e.clientX - rect.left - 4}px`;
+                cursor.style.top = `${e.clientY - rect.top - 4}px`;
+
+                cursor.style.width = `${screenDiameter}px`;
+                cursor.style.height = `${screenDiameter}px`;
+                cursor.style.borderColor = document.getElementById('paintColor').value;
+            } else {
+                document.getElementById('brushCursor').style.display = 'none';
+            }
+        });
+        wrapper.addEventListener('pointerup', () => isDrawing = false);
+        wrapper.addEventListener('pointerleave', () => {
+            document.getElementById('brushCursor').style.display = 'none';
+        });
+
+        function animate() {
+            // 1. Update rotation first
+            if (isRotating) {
+                currentRotation += parseFloat(document.getElementById('rotationSpeed').value);
+                rotator.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
+            }
+
+            // 2. Continuous drawing while pointer is down
+            if (isDrawing) {
+                // Recalculate canvas coordinates based on the new rotation angle
+                const coords = getCoords(pointerX, pointerY);
+                currentX = coords.x;
+                currentY = coords.y;
+
+                paintAt(currentX, currentY);
+            }
+
+            requestAnimationFrame(animate);
         }
-    });
-    wrapper.addEventListener('pointerup', () => isDrawing = false);
 
-    function animate() {
-        currentRotation += parseFloat(document.getElementById('rotationSpeed').value);
-        rotator.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
         requestAnimationFrame(animate);
-    }
-
-    requestAnimationFrame(animate);
-    generateRandomSpiral();
-    addLayer();
-</script>
+        updateBrushSizeDisplay();
+        updateBrushOpacityDisplay();
+        updateSymmetryDisplay();
+        updateRotationSpeedDisplay();
+        updateSpiralDisplay();
+        updateUndoRedoButtons();
+        addLayer();
+    </script>
 </body>
+
 </html>
